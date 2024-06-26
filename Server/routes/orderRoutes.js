@@ -5,7 +5,10 @@ const orderController = require('../controllers/orderController');
 const { auth, authorize } = require('../middlewares/auth');
 const { ROLES } = require('../constants/Constants');
 
-router.post('/orders', auth, authorize(ROLES.waiter), orderController.createOrder);
+// Create an order without authentication
+router.post('/orders', orderController.createOrder);
+
+// All other order-related routes require authentication and authorization
 router.get('/orders', auth, orderController.getAllOrders);
 router.get('/orders/:id', auth, orderController.getOrderById);
 router.put('/orders/:id', auth, orderController.updateOrder);

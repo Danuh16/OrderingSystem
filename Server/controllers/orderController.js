@@ -4,22 +4,32 @@ const { ORDER_CATEGORIES, ROLES } = require('../constants/Constants');
 exports.createOrder = async (req, res) => {
   try {
     const { table, items } = req.body;
-    const order = new Order({ table, items });
+    const order = new Order({ table });
 
     // Categorize the order items and assign to appropriate roles
-    order.items = items.map(item => {
-      let assignedTo;
-      if (ORDER_CATEGORIES.hotDrinks.includes(item.item)) {
-        assignedTo = ROLES.barista;
-      } else if (ORDER_CATEGORIES.desserts.includes(item.item)) {
-        assignedTo = ROLES.desserts;
-      } else if (ORDER_CATEGORIES.foodItems.includes(item.item)) {
-        assignedTo = ROLES.kitchen;
-      } else {
-        assignedTo = ROLES.waiter;
-      }
-      return { item: item.item, quantity: item.quantity, price: item.price, assignedTo };
-    });
+    order.items = await Promise.all(
+      items.map(async (item) => {
+        let assignedTo;
+        if (ORDER_CATEGORIES.hotDrinks.includes(item.item)) {
+          assignedTo = ROLES.barista;
+        } else if (ORDER_CATEGORIES.desserts.includes(item.item)) {
+          assignedTo = ROLES.desserts;
+        } else if (ORDER_CATEGORIES.foodItems.includes(item.item)) {
+          assignedTo = ROLES.kitchen;
+        } else {
+          assignedTo = ROLES.waiter;
+        }
+        return { item: item.item, quantity: item.quantity, price: item.price, assignedTo };
+      })
+    );
+
+    // Set the order-level assignedTo field
+    order.assignedTo = order.items.reduce((prevRole, orderItem) => {
+      if (orderItem.assignedTo === ROLES.kitchen) return ROLES.kitchen;
+      if (orderItem.assignedTo === ROLES.barista) return ROLES.barista;
+      if (orderItem.assignedTo === ROLES.desserts) return ROLES.desserts;
+      return ROLES.waiter;
+    }, ROLES.waiter);
 
     await order.save();
     res.status(201).json(order);
