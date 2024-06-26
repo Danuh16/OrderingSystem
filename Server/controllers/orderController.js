@@ -1,5 +1,4 @@
-// controllers/orderController.js
-const { Order, orderItemSchema } = require('../models/OrderSchema');
+const { Order } = require('../models/OrderSchema');
 const { ORDER_CATEGORIES, ROLES } = require('../constants/Constants');
 
 exports.createOrder = async (req, res) => {
@@ -29,6 +28,54 @@ exports.createOrder = async (req, res) => {
   }
 };
 
+exports.getAllOrders = async (req, res) => {
+  try {
+    const orders = await Order.find();
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.getOrderById = async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+    res.json(order);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.updateOrder = async (req, res) => {
+  try {
+    const { table, items } = req.body;
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+    order.table = table;
+    order.items = items;
+    await order.save();
+    res.json(order);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
+exports.getWaiterOrders = async (req, res) => {
+  try {
+    const orders = await Order.find({
+      'items.assignedTo': ROLES.waiter
+    });
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 exports.getBaristaDrinks = async (req, res) => {
   try {
     const orders = await Order.find({
@@ -55,6 +102,17 @@ exports.getDessertOrders = async (req, res) => {
   try {
     const orders = await Order.find({
       'items.assignedTo': ROLES.desserts
+    });
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.getCashierOrders = async (req, res) => {
+  try {
+    const orders = await Order.find({
+      'items.assignedTo': ROLES.cashier
     });
     res.json(orders);
   } catch (err) {
