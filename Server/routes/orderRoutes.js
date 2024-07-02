@@ -1,22 +1,55 @@
-// routes/orderRoutes.js
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const orderController = require('../controllers/orderController');
-const { auth, authorize } = require('../middlewares/auth');
-const { ROLES } = require('../constants/Constants');
+const orderController = require("../controllers/orderController");
+const { ROLES } = require("../constants/Constants");
+const { auth, authorize } = require("../middlewares/auth");
 
-// Create an order without authentication
-router.post('/orders', orderController.createOrder);
+router.post("/", authorize(ROLES.waiter), orderController.createOrder);
+router.put(
+  "/:tableId/:orderId/items/:itemId/status",
+  authorize(ROLES.kitchen, ROLES.barista, ROLES.desserts),
+  orderController.updateOrderItem
+);
+router.put(
+  "/:tableId/:orderId/status",
+  authorize(ROLES.waiter),
+  orderController.updateOrderStatus
+);
+router.delete('/:tableId/:orderId', authorize(ROLES.waiter), orderController.deleteOrder);
+router.get(
+  "/:tableId/orders",
+  authorize(ROLES.waiter, ROLES.cashier),
+  orderController.getTableOrders
+);
+router.get("/", authorize(ROLES.cashier), orderController.getAllOrders);
+router.get('/history', authorize(ROLES.waiter, ROLES.cashier), orderController.getOrderHistory);
+router.get(
+  "/assigned",
+  authorize(ROLES.waiter),
+  orderController.getWaiterOrders
+);
+router.get(
+  "/barista",
+  authorize(ROLES.barista),
+  orderController.getBaristaDrinks
+);
+router.get(
+  "/kitchen",
+  authorize(ROLES.kitchen),
+  orderController.getKitchenOrders
+);
+router.get(
+  "/desserts",
+  authorize(ROLES.desserts),
+  orderController.getDessertOrders
+);
+router.get(
+  "/cashier",
+  authorize(ROLES.cashier),
+  orderController.getCashierOrders
+);
 
-// All other order-related routes require authentication and authorization
-router.get('/orders', auth, orderController.getAllOrders);
-router.get('/orders/:id', auth, orderController.getOrderById);
-router.put('/orders/:id', auth, orderController.updateOrder);
-
-router.get('/orders/waiter', auth, authorize(ROLES.waiter), orderController.getWaiterOrders);
-router.get('/orders/barista', auth, authorize(ROLES.barista), orderController.getBaristaDrinks);
-router.get('/orders/kitchen', auth, authorize(ROLES.kitchen), orderController.getKitchenOrders);
-router.get('/orders/desserts', auth, authorize(ROLES.desserts), orderController.getDessertOrders);
-router.get('/orders/cashier', auth, authorize(ROLES.cashier), orderController.getCashierOrders);
+router.get('/tables/:id/status', authorize(ROLES.waiter, ROLES.cashier), orderController.getTableStatus);
+// router.put('/tables/:id/status', authorize(ROLES.waiter), orderController.updateTableStatus);
 
 module.exports = router;

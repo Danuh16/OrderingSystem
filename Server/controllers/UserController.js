@@ -39,10 +39,16 @@ exports.register = async (req, res) => {
       await existingUser.save();
     }
 
-    const token = jwt.sign({ userId: existingUser._id, role: existingUser.role }, JWT_SECRET);
+    const token = jwt.sign(
+      { userId: existingUser._id, role: existingUser.role },
+      JWT_SECRET
+    );
     res
       .status(201)
-      .json({ token, user: { id: existingUser._id, fullName, username, role } });
+      .json({
+        token,
+        user: { id: existingUser._id, fullName, username, role },
+      });
   } catch (err) {
     // Check for the specific duplicate key error
     if (err.code === 11000 && err.keyPattern && err.keyPattern.username) {
@@ -81,4 +87,57 @@ exports.login = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
+};
+
+//GET ALL USERS
+exports.GetAllUser = async (req, res) => {
+  try {
+    const userList = await User.find();
+    res.json(userList);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// UPDATE USER
+exports.updateUser = async (req, res) => {
+  try {
+    const user = await User.findOne({ _id: req.params.id });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Update the user with the new information
+    user.username = req.body.username || user.username;
+
+    await user.save();
+    res.json(user);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+// DELETE USER
+exports.deleteUser = async (req, res) => {
+  try {
+    // Find the user by ID
+    const user = await User.findOne({ _id: req.params.id });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    await user.deleteOne();
+    return res.json({ message: "User deleted" });
+  } catch (error) {
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+//LOGOUT LOGIC
+exports.userLogout = (req, res) => {
+  // Clear the token or any session information
+  res.clearCookie("token");
+  return res.status(200).json({
+    message: "You have been logged out successfully.",
+    success: true,
+  });
 };

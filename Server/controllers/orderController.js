@@ -1,84 +1,106 @@
-const { Order } = require('../models/OrderSchema');
-const { ORDER_CATEGORIES, ROLES } = require('../constants/Constants');
-
-exports.createOrder = async (req, res) => {
-  try {
-    const { table, items } = req.body;
-    const order = new Order({ table });
-
-    // Categorize the order items and assign to appropriate roles
-    order.items = await Promise.all(
-      items.map(async (item) => {
-        let assignedTo;
-        if (ORDER_CATEGORIES.hotDrinks.includes(item.item)) {
-          assignedTo = ROLES.barista;
-        } else if (ORDER_CATEGORIES.desserts.includes(item.item)) {
-          assignedTo = ROLES.desserts;
-        } else if (ORDER_CATEGORIES.foodItems.includes(item.item)) {
-          assignedTo = ROLES.kitchen;
-        } else {
-          assignedTo = ROLES.waiter;
-        }
-        return { item: item.item, quantity: item.quantity, price: item.price, assignedTo };
-      })
-    );
-
-    // Set the order-level assignedTo field
-    order.assignedTo = order.items.reduce((prevRole, orderItem) => {
-      if (orderItem.assignedTo === ROLES.kitchen) return ROLES.kitchen;
-      if (orderItem.assignedTo === ROLES.barista) return ROLES.barista;
-      if (orderItem.assignedTo === ROLES.desserts) return ROLES.desserts;
-      return ROLES.waiter;
-    }, ROLES.waiter);
-
-    await order.save();
-    res.status(201).json(order);
-  } catch (err) {
-    res.status(400).json({ message: err.message });
-  }
-};
+const Order = require("../models/OrderSchema");
+const Table = require("../models/TableSchema");
+const { ORDER_CATEGORIES, ROLES } = require("../constants/Constants");
 
 exports.getAllOrders = async (req, res) => {
   try {
-    const orders = await Order.find();
+    const orders = await Order.find()
+      .populate("table")
+      .populate("items.category");
     res.json(orders);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-exports.getOrderById = async (req, res) => {
+exports.createOrder = async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id);
-    if (!order) {
-      return res.status(404).json({ message: 'Order not found' });
-    }
-    res.json(order);
+    const { table, items } = req.body;
+    const tableDoc = await Table.findById(table);
+
+    const order = {
+      items: await Promise.all(
+        items.map(async (item) => {
+          let assignedTo;
+          if (ORDER_CATEGORIES.hotDrinks.includes(item.item)) {
+            assignedTo = ROLES.barista;
+          } else if (ORDER_CATEGORIES.desserts.includes(item.item)) {
+            assignedTo = ROLES.desserts;
+          } else if (ORDER_CATEGORIES.foodItems.includes(item.item)) {
+            assignedTo = ROLES.kitchen;
+          } else {
+            assignedTo = ROLES.waiter;
+          }
+          return {
+            item: item.item,
+            quantity: item.quantity,
+            price: item.price,
+            assignedTo,
+            status: "pending",
+          };
+        })
+      ),
+      createdBy: req.user.id,
+      status: "pending",
+    };
+
+    tableDoc.orders.push(order);
+    await tableDoc.save();
+    res.status(201).json(order);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(400).json({ message: err.message });
   }
 };
 
-exports.updateOrder = async (req, res) => {
+exports.updateOrderItem = async (req, res) => {
+  const { tableId, orderId, itemId } = req.params;
+  const { status } = req.body;
+
   try {
-    const { table, items } = req.body;
-    const order = await Order.findById(req.params.id);
-    if (!order) {
-      return res.status(404).json({ message: 'Order not found' });
+    const table = await Table.findById(tableId);
+    const order = table.orders.id(orderId);
+    const item = order.items.id(itemId);
+
+    if (order.items.some((i) => i.status === "done")) {
+      return res
+        .status(400)
+        .json({ message: "Only one item can be updated at a time" });
     }
-    order.table = table;
-    order.items = items;
-    await order.save();
+
+    item.status = status;
+    await table.save();
     res.json(order);
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
 };
 
+exports.updateOrderStatus = async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  try {
+    const order = await Order.findByIdAndUpdate(id, { status }, { new: true });
+    res.json(order);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
+exports.getTableOrders = async (req, res) => {
+  try {
+    const table = await Table.findById(req.params.tableId).populate("orders");
+    res.json(table.orders);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 exports.getWaiterOrders = async (req, res) => {
   try {
     const orders = await Order.find({
-      'items.assignedTo': ROLES.waiter
+      createdBy: req.user.id,
+      status: { $ne: "completed" },
     });
     res.json(orders);
   } catch (err) {
@@ -89,7 +111,8 @@ exports.getWaiterOrders = async (req, res) => {
 exports.getBaristaDrinks = async (req, res) => {
   try {
     const orders = await Order.find({
-      'items.assignedTo': ROLES.barista
+      "items.assignedTo": ROLES.barista,
+      "items.status": { $ne: "done" },
     });
     res.json(orders);
   } catch (err) {
@@ -100,7 +123,8 @@ exports.getBaristaDrinks = async (req, res) => {
 exports.getKitchenOrders = async (req, res) => {
   try {
     const orders = await Order.find({
-      'items.assignedTo': ROLES.kitchen
+      "items.assignedTo": ROLES.kitchen,
+      "items.status": { $ne: "done" },
     });
     res.json(orders);
   } catch (err) {
@@ -111,7 +135,8 @@ exports.getKitchenOrders = async (req, res) => {
 exports.getDessertOrders = async (req, res) => {
   try {
     const orders = await Order.find({
-      'items.assignedTo': ROLES.desserts
+      "items.assignedTo": ROLES.desserts,
+      "items.status": { $ne: "done" },
     });
     res.json(orders);
   } catch (err) {
@@ -119,12 +144,128 @@ exports.getDessertOrders = async (req, res) => {
   }
 };
 
+exports.deleteOrder = async (req, res) => {
+  const { tableId, orderId } = req.params;
+
+  try {
+    const table = await Table.findById(tableId);
+    const orderIndex = table.orders.findIndex((order) => order._id.toString() === orderId);
+
+    if (orderIndex === -1) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    const order = table.orders[orderIndex];
+
+    // Check if all items in the order have a status of "done"
+    if (order.items.every((item) => item.status === 'done')) {
+      table.orders.splice(orderIndex, 1);
+      await table.save();
+      res.json({ message: 'Order deleted' });
+    } else {
+      res.status(400).json({ message: 'Cannot delete an order with items not in "done" status' });
+    }
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 exports.getCashierOrders = async (req, res) => {
   try {
-    const orders = await Order.find({
-      'items.assignedTo': ROLES.cashier
-    });
+    const orders = await Order.find({ status: "completed" });
     res.json(orders);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.getOrderStats = async (req, res) => {
+  try {
+    const startDate = new Date(req.query.startDate);
+    const endDate = new Date(req.query.endDate);
+
+    const orders = await Order.find({
+      createdAt: { $gte: startDate, $lte: endDate },
+    }).populate("items.category");
+
+    const totalRevenue = orders.reduce((total, order) => {
+      return (
+        total +
+        order.items.reduce((itemTotal, item) => {
+          return itemTotal + item.quantity * item.price;
+        }, 0)
+      );
+    }, 0);
+
+    const itemStats = orders.reduce((stats, order) => {
+      order.items.forEach((item) => {
+        const existingItem = stats.find((i) => i.item === item.item);
+        if (existingItem) {
+          existingItem.quantity += item.quantity;
+        } else {
+          stats.push({
+            item: item.item,
+            category: item.category.name,
+            quantity: item.quantity,
+          });
+        }
+      });
+      return stats;
+    }, []);
+
+    itemStats.sort((a, b) => b.quantity - a.quantity);
+
+    const busyTimes = orders.reduce((stats, order) => {
+      const hour = order.createdAt.getHours();
+      stats[hour] = (stats[hour] || 0) + 1;
+      return stats;
+    }, []);
+
+    res.json({
+      totalRevenue,
+      mostPopularItems: itemStats.slice(0, 5),
+      busyTimes,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.getOrderHistory = async (req, res) => {
+  try {
+    const { tableId, userId } = req.query;
+    let query = {};
+
+    if (tableId) {
+      const table = await Table.findById(tableId);
+      if (!table) {
+        return res.status(404).json({ message: "Table not found" });
+      }
+      query = { _id: { $in: table.orders.map((o) => o._id) } };
+    } else if (userId) {
+      query = { createdBy: userId };
+    } else {
+      return res
+        .status(400)
+        .json({ message: "Either tableId or userId must be provided" });
+    }
+
+    const orders = await Order.find(query)
+      .populate("table")
+      .populate("items.category");
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.getTableStatus = async (req, res) => {
+  try {
+    const table = await Table.findById(req.params.id);
+    if (!table) {
+      return res.status(404).json({ message: "Table not found" });
+    }
+    res.json({ status: table.status });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
