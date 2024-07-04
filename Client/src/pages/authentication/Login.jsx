@@ -308,7 +308,7 @@ export default function Login({ closeEvent }) {
     try {
       setLoading(true);
       const response = await axios.post(
-        `${process.env.REACT_APP_BASE_URL}/login`,
+        `${process.env.REACT_APP_BASE_URL}/api/auth/login`,
         {
           username,
           password,
@@ -329,7 +329,15 @@ export default function Login({ closeEvent }) {
         case "cashier":
           navigate("/cashier");
           break;
-        // ... other cases
+        case "barista":
+          navigate("/barista");
+          break;
+        case "kitchen":
+          navigate("/kitchen");
+          break;
+        case "waiter":
+          navigate("/waiters");
+          break;
         default:
           break;
       }
