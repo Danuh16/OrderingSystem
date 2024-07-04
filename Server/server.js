@@ -1,4 +1,5 @@
 const express = require('express');
+const cors = require ('cors')
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const orderRoutes = require('./routes/orderRoutes');
@@ -15,6 +16,8 @@ const corsOptions = {
   origin: "*", // Replace with allowed origin
   optionsSuccessStatus: 200,
 };
+
+app.use(cors(corsOptions));
 
 
 

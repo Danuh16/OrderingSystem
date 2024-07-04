@@ -58,34 +58,37 @@ exports.register = async (req, res) => {
   }
 };
 
-exports.login = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
 
+exports.login = async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    // Ensure username is provided and not null
-    if (!username) {
-      return res.status(400).json({ message: "Username is required" });
+    // Check if username and password are provided
+    if (!username || !password) {
+      return res.status(400).json({ message: 'Username and password are required' });
     }
 
+    // Find the user by username
     const user = await User.findOne({ username });
     if (!user) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
 
+    // Compare the provided password with the hashed password in the database
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(401).json({ message: "Invalid credentials" });
+      return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ userId: user._id, role: user.role }, JWT_SECRET);
+    // Generate a JWT token
+    const token = jwt.sign({ userId: user._id, role: user.role }, JWT_SECRET, {
+      expiresIn: '1h',
+    });
+
     res.json({ token, user: { id: user._id, username, role: user.role } });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error(err);
+    res.status(500).json({ message: 'Internal server error' });
   }
 };
 
