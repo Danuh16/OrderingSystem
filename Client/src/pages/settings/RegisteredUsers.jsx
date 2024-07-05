@@ -88,7 +88,7 @@ export default function RegisteredUsers() {
   const handleClose = () => setOpen(false);
 
   const tableHeaders = [
-    { label: "Id", field: "_id" },
+    { label: "Id", field: "" },
     { label: "User Name", field: "username" },
     { label: "First Name", field: "firstName" },
     { label: "Last Name", field: "lastName" },

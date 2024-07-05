@@ -344,9 +344,15 @@ const KitchenDashboard = () => {
 
   useEffect(() => {
     const fetchKitchenOrders = async () => {
+      const token=localStorage.getItem("token");
       try {
         const response = await axios.get(
-          `${process.env.REACT_APP_BASE_URL}/api/orders`
+          `${process.env.REACT_APP_BASE_URL}/api/orders`,{
+            headers:{
+              'Authorization': `Bearer ${token}`, // Ensure there are no extra spaces
+            }
+          }
+
         );
 
         // Filter orders to only include items with the "Pizza" category
@@ -369,27 +375,6 @@ const KitchenDashboard = () => {
     return () => clearInterval(interval); // Cleanup on unmount
   }, []);
 
-  // const handleItemDone = async (orderIndex, itemIndex) => {
-  //   const updatedOrders = [...kitchenOrders];
-  //   const orderId = updatedOrders[orderIndex]._id;
-  //   const itemId = updatedOrders[orderIndex].items[itemIndex]._id;
-
-  //   try {
-  //     await axios.patch(
-  //       `${process.env.REACT_APP_BASE_URL}/api/orders/${orderId}/items/${itemId}/done`
-  //     );
-
-  //     updatedOrders[orderIndex].items.splice(itemIndex, 1);
-
-  //     if (updatedOrders[orderIndex].items.length === 0) {
-  //       updatedOrders.splice(orderIndex, 1);
-  //     }
-
-  //     setKitchenOrders(updatedOrders);
-  //   } catch (error) {
-  //     console.error("Error marking item as done:", error);
-  //   }
-  // };
 
   const handleItemDone = async (orderIndex, itemIndex) => {
     const updatedOrders = [...kitchenOrders];

@@ -4,7 +4,7 @@ const orderController = require("../controllers/orderController");
 const { ROLES } = require("../constants/Constants");
 const { auth, authorize } = require("../middlewares/auth");
 
-router.post("/", authorize(ROLES.waiter), orderController.createOrder);
+router.post("/orders", authorize(ROLES.waiter), orderController.createOrder);
 router.put(
   "/:tableId/:orderId/items/:itemId/status",
   authorize(ROLES.kitchen, ROLES.barista, ROLES.desserts),
@@ -50,6 +50,8 @@ router.get(
 );
 
 router.get('/tables/:id/status', authorize(ROLES.waiter, ROLES.cashier), orderController.getTableStatus);
+router.get('/tables',auth, authorize(ROLES.waiter, ROLES.cashier), orderController.getAllTableData);
+// router.post('/create/table', orderController.createTableData);
 // router.put('/tables/:id/status', authorize(ROLES.waiter), orderController.updateTableStatus);
 
 module.exports = router;

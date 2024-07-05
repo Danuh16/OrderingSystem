@@ -270,3 +270,55 @@ exports.getTableStatus = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+exports.createTableData = async (req, res) => {
+  try {
+    const tables = [
+      { name: "Table 1", status: "Vacant", orders: [], number: 1 },
+      { name: "Table 2", status: "Vacant", orders: [], number: 2 },
+      { name: "Table 3", status: "Vacant", orders: [], number: 3 },
+      { name: "Table 4", status: "Vacant", orders: [], number: 4 },
+      { name: "Table 5", status: "Vacant", orders: [], number: 5 },
+      { name: "Table 6", status: "Vacant", orders: [], number: 6 },
+      { name: "Table 7", status: "Vacant", orders: [], number: 7 },
+      { name: "Table 8", status: "Vacant", orders: [], number: 8 },
+      { name: "Table 9", status: "Vacant", orders: [], number: 9 },
+      { name: "Table 10", status: "Vacant", orders: [], number: 10 },
+      { name: "Table 11", status: "Vacant", orders: [], number: 11 },
+      { name: "Table 12", status: "Vacant", orders: [], number: 12 },
+      { name: "Table 13", status: "Vacant", orders: [], number: 13 },
+      { name: "Table 14", status: "Vacant", orders: [], number: 14 },
+      { name: "Table 15", status: "Vacant", orders: [], number: 15 },
+      { name: "Table 16", status: "Vacant", orders: [], number: 16 },
+      { name: "Table 17", status: "Vacant", orders: [], number: 17 },
+      { name: "Table 18", status: "Vacant", orders: [], number: 18 },
+      { name: "Table 19", status: "Vacant", orders: [], number: 19 },
+      { name: "Table 20", status: "Vacant", orders: [], number: 20 },
+      { name: "Table 21", status: "Vacant", orders: [], number: 21 },
+      { name: "Table 22", status: "Vacant", orders: [], number: 22 },
+      { name: "Table 23", status: "Vacant", orders: [], number: 23 },
+      // Add more tables as needed with unique number
+    ]
+    const createdTables = await Table.insertMany(tables);
+
+    if (!createdTables || createdTables.length === 0) {
+      return res.status(404).json({ message: "No tables were created" });
+    }
+
+    res.status(201).json({ message: "Tables created successfully", data: createdTables });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.getAllTableData = async (req, res) => {
+  try {
+    const table = await Table.find();
+    if (!table) {
+      return res.status(404).json({ message: "Table not found" });
+    }
+    res.json(table );
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};

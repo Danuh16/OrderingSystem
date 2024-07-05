@@ -2,8 +2,10 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { validationResult } = require("express-validator");
 const User = require("../models/UserSchema");
+require('dotenv').config();
 
-const JWT_SECRET = process.env.JWT_SECRET || "your_default_secret_key";
+const JWT_SECRET = process.env.JWT_SECRET || "591be5a2df5124a0285572d9f3f2db152edcb5cdc5a0c13359127f26a8b96eb2";
+
 
 exports.register = async (req, res) => {
   const errors = validationResult(req);
@@ -12,7 +14,7 @@ exports.register = async (req, res) => {
   }
 
   try {
-    const { fullName, username, password, role } = req.body;
+    const { firstName, lastName, username, password, role } = req.body;
 
     // Ensure username is provided and not null
     if (!username) {
@@ -31,7 +33,8 @@ exports.register = async (req, res) => {
     } else {
       const hashedPassword = await bcrypt.hash(password, 10);
       existingUser = new User({
-        fullName,
+        firstName,
+        lastName,
         username,
         password: hashedPassword,
         role,
@@ -47,7 +50,7 @@ exports.register = async (req, res) => {
       .status(201)
       .json({
         token,
-        user: { id: existingUser._id, fullName, username, role },
+        user: { id: existingUser._id,firstName ,lastName, username, role },
       });
   } catch (err) {
     // Check for the specific duplicate key error

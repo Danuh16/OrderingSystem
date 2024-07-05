@@ -728,9 +728,15 @@ const WaiterDashboard = () => {
 
   useEffect(() => {
     const fetchTables = async () => {
+      const token=localStorage.getItem("token");
+
       try {
         const response = await axios.get(
-          process.env.REACT_APP_BASE_URL + "/api/tables"
+          process.env.REACT_APP_BASE_URL + "/api/tables",{
+            headers:{
+              'Authorization': `Bearer ${token}`, // Ensure there are no extra spaces
+            }
+            }
         );
         setTableData(response.data);
       } catch (error) {
@@ -758,6 +764,7 @@ const WaiterDashboard = () => {
   };
 
   const handleSendToKitchen = async () => {
+    const token=localStorage.getItem("token");
     if (!selectedTable) {
       alert("Please select a table before sending the order to the kitchen.");
       return;
@@ -788,8 +795,13 @@ const WaiterDashboard = () => {
 
     try {
       const response = await axios.post(
-        process.env.REACT_APP_BASE_URL + "/api/orders",
-        newOrder
+        
+        process.env.REACT_APP_BASE_URL + "/api/orders",{
+          headers:{
+            'Authorization': `Bearer ${token}`, // Ensure there are no extra spaces
+          },
+          newOrder
+          }
       );
       const createdOrder = response.data;
 
